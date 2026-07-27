@@ -342,6 +342,13 @@ local function DrawWorldModel(self, force)
 			willdraw = true
 		end
 	else
+		-- Z-City normally updates the active local weapon from CalcView. VRMod
+		-- owns CalcView, so without this the world model is only refreshed by
+		-- events such as firing. Update it during the VR character draw instead.
+		if CLIENT and owner == LocalPlayer() and g_VR and g_VR.active then
+			self:VRFollowRightHand()
+		end
+
 		willdraw = true
 	end
 
@@ -667,6 +674,53 @@ function SWEP:WorldModel_Transform(bNoApply, bNoAdditional, model)
 		model:SetAngles(ang)
 		self:DrawShadow(false)
 	end
+end
+
+-- The regular Z-City transform is driven by the camera/character pose. In VR
+-- that pose is not refreshed from CalcView, so retain its initial weapon
+-- placement as a controller-local offset and apply that offset to the tracked
+-- right hand every frame.
+function SWEP:VRFollowRightHand(model)
+	model = model or self.worldModel
+
+	local owner = self:GetOwner()
+	local tracking = g_VR and g_VR.tracking
+	local hand = tracking and tracking.pose_righthand
+	if not IsValid(model) or owner ~= LocalPlayer() or not hand or not hand.pos or not hand.ang then
+		return false
+	end
+
+	-- Recalculate the offset when the clientside model is recreated. This keeps
+	-- the model's existing per-weapon alignment without requiring offsets for
+	-- every Z-City weapon.
+	if self.vrHandModel ~= model then
+		self:WorldModel_Transform(false, nil, model)
+		self.vrHandModel = model
+		self.vrHandOffsetPos, self.vrHandOffsetAng = WorldToLocal(
+			model:GetPos(),
+			model:GetAngles(),
+			hand.pos,
+			hand.ang
+		)
+	end
+
+	local pos, ang = LocalToWorld(
+		self.vrHandOffsetPos or vector_origin,
+		self.vrHandOffsetAng or angle_zero,
+		hand.pos,
+		hand.ang
+	)
+
+	self.desiredPos, self.desiredAng = pos, ang
+	self.handPos, self.handAng = hand.pos, hand.ang
+
+	model:SetRenderOrigin(pos)
+	model:SetRenderAngles(ang)
+	model:SetPos(pos)
+	model:SetAngles(ang)
+	self:DrawShadow(true)
+
+	return true
 end
 
 local noSlingBone = "ValveBiped.Bip01_Pelvis"
