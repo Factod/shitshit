@@ -9,7 +9,7 @@ Optional Discord RPC module for clients:
 
 ## VRMod: Ultimate (Quest/Touch)
 
-Z-City forwards **[G]VRMod: Ultimate**'s default reload action to Z-City weapons. Touch **both thumb rests** to reload, as configured by VRMod's default Oculus Touch profile. Shooting remains on VRMod's normal **right trigger** binding. The active Z-City weapon model continuously follows the tracked right hand.
+Z-City forwards **[G]VRMod: Ultimate**'s default reload action to Z-City weapons. Touch **both thumb rests** to reload, as configured by VRMod's default Oculus Touch profile. Shooting remains on VRMod's normal **right trigger** binding.
 
 Set `zcity_vrmod_thumbrest_reload 0` to use VRMod's own reload-command handler instead. If SteamVR has a custom controller binding selected, map its reload action to `boolean_reload`.
 
