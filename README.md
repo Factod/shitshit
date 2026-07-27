@@ -7,6 +7,15 @@ Optional Discord RPC module for clients:
 1. https://github.com/YuRaNnNzZZ/gmcl_steamrichpresencer/releases/tag/2023.07.20
 2. https://github.com/fluffy-servers/gmod-discord-rpc/releases/tag/1.2.1
 
+## VRMod: Ultimate (Quest/Touch)
+
+Z-City configures the default **[G]VRMod: Ultimate** Oculus Touch profile automatically:
+
+- **Right thumb rest** — primary fire
+- **Left thumb rest** — reload
+
+The thumb rests are capacitive touch inputs, so touching them activates the action. Set `zcity_vrmod_thumbrest_controls 0` to leave the VRMod default Touch bindings unchanged. If SteamVR has a custom controller binding selected, update that binding with the same primary-fire and reload actions.
+
 The current version in the repository is 1.4.0
 
 ## The numbers in the version number indicate:
