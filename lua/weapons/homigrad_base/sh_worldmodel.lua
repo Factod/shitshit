@@ -711,9 +711,9 @@ function SWEP:VRFollowRightHand(model)
 		hand.ang
 	)
 
-	self.desiredPos, self.desiredAng = pos, ang
-	self.handPos, self.handAng = hand.pos, hand.ang
-
+	-- Keep this visual-only. GetTrace uses desiredPos/desiredAng for predicted
+	-- bullets, and replacing those with client-only controller data desynchronizes
+	-- the trace from the server weapon transform.
 	model:SetRenderOrigin(pos)
 	model:SetRenderAngles(ang)
 	model:SetPos(pos)
