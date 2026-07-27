@@ -13,6 +13,8 @@ Z-City forwards **[G]VRMod: Ultimate**'s default reload action to Z-City weapons
 
 Set `zcity_vrmod_thumbrest_reload 0` to use VRMod's own reload-command handler instead. If SteamVR has a custom controller binding selected, map its reload action to `boolean_reload`.
 
+An isolated visual hand-follow model is available for testing with `zcity_vr_hand_weapon 1`. It is disabled by default so it cannot affect shooting or cause a regression; use `zcity_vr_hand_weapon 0` to turn it off immediately.
+
 The current version in the repository is 1.4.0
 
 ## The numbers in the version number indicate:

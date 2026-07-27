@@ -296,6 +296,18 @@ local lpos2, lang2 = Vector(0,5,0), Angle(0,0,0)
 local reloadlerp = 0
 SWEP.GetDebug = false
 
+-- Uses an isolated clientside model for VR. It can be disabled immediately
+-- from the console without touching the actual weapon or its bullet trace.
+local hg_vr_hand_weapon = CreateClientConVar(
+	"zcity_vr_hand_weapon",
+	"0",
+	true,
+	false,
+	"Render the active Z-City weapon on the tracked VR right hand.",
+	0,
+	1
+)
+
 local function DrawWorldModel(self, force)
 	if RENDERING_SCOPE == self then return end
 	if not IsValid(self) or not self.WorldModel_Transform then return end
@@ -342,6 +354,12 @@ local function DrawWorldModel(self, force)
 			willdraw = true
 		end
 	else
+		-- Do not move the regular world model in VR: it is also used by Z-City's
+		-- predicted weapon trace. Draw a separate, visual-only hand model instead.
+		if owner == LocalPlayer() and g_VR and g_VR.active and self:DrawVRHandModel() then
+			return
+		end
+
 		willdraw = true
 	end
 
@@ -668,6 +686,101 @@ function SWEP:WorldModel_Transform(bNoApply, bNoAdditional, model)
 		self:DrawShadow(false)
 	end
 end
+
+-- VR rendering must not alter worldModel, desiredPos, desiredAng, or handPos:
+-- those are shared with Z-City's shooting and prediction code. This separate
+-- model is visual-only and is discarded when VR ends or the weapon is removed.
+function SWEP:ClearVRHandModel()
+	if IsValid(self.vrHandVisualModel) then
+		self.vrHandVisualModel:Remove()
+	end
+
+	self.vrHandVisualModel = nil
+	self.vrHandSourceModel = nil
+	self.vrHandOffsetPos = nil
+	self.vrHandOffsetAng = nil
+end
+
+function SWEP:DrawVRHandModel()
+	if not hg_vr_hand_weapon:GetBool() then
+		self:ClearVRHandModel()
+		return false
+	end
+
+	local owner = self:GetOwner()
+	local hand = g_VR and g_VR.tracking and g_VR.tracking.pose_righthand
+	local source = self.worldModel
+	if owner ~= LocalPlayer() or not hand or not hand.pos or not hand.ang or not IsValid(source) then
+		return false
+	end
+
+	if self.vrHandSourceModel ~= source or not IsValid(self.vrHandVisualModel) then
+		self:ClearVRHandModel()
+
+		-- Calculate Z-City's normal alignment without applying it. The original
+		-- world model and its predicted shooting state remain untouched.
+		local sourcePos, sourceAng = self:WorldModel_Transform(true, nil, source)
+		if not IsValid(source) then return false end
+		sourcePos = sourcePos or source:GetPos()
+		sourceAng = sourceAng or source:GetAngles()
+
+		local visual = ClientsideModel(source:GetModel())
+		if not IsValid(visual) then return false end
+
+		visual:SetNoDraw(true)
+		visual:SetSkin(source:GetSkin())
+		for bodygroup = 0, 6 do
+			visual:SetBodygroup(bodygroup, source:GetBodygroup(bodygroup))
+		end
+
+		if self.FakeScale then
+			visual:SetModelScale(self.FakeScale, 0)
+		end
+
+		self.vrHandVisualModel = visual
+		self.vrHandSourceModel = source
+		self.vrHandOffsetPos, self.vrHandOffsetAng = WorldToLocal(
+			sourcePos,
+			sourceAng,
+			hand.pos,
+			hand.ang
+		)
+
+		self:CallOnRemove("ZCityVRHandVisualModel", function()
+			if IsValid(visual) then
+				visual:Remove()
+			end
+		end)
+	end
+
+	local pos, ang = LocalToWorld(
+		self.vrHandOffsetPos or vector_origin,
+		self.vrHandOffsetAng or angle_zero,
+		hand.pos,
+		hand.ang
+	)
+	local visual = self.vrHandVisualModel
+
+	visual:SetRenderOrigin(pos)
+	visual:SetRenderAngles(ang)
+	visual:SetPos(pos)
+	visual:SetAngles(ang)
+	visual:SetSequence(source:GetSequence())
+	visual:SetCycle(source:GetCycle())
+	visual:SetupBones()
+	visual:DrawModel()
+
+	return true
+end
+
+hook.Add("VRMod_Exit", "ZCityVRHandWeaponCleanup", function(ply)
+	if ply ~= LocalPlayer() then return end
+
+	local weapon = ply:GetActiveWeapon()
+	if IsValid(weapon) and weapon.ClearVRHandModel then
+		weapon:ClearVRHandModel()
+	end
+end)
 
 local noSlingBone = "ValveBiped.Bip01_Pelvis"
 local noSlingPos = Vector(9, 3, 0)
